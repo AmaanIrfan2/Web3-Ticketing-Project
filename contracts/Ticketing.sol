@@ -64,7 +64,15 @@ contract Ticketing is ERC721, AccessControl, ReentrancyGuard {
         require(date > block.timestamp, "Event date must be in the future");
         //Checks tickets allowed are at least 1, saves the event, announces it, and increases the event count
         require(totalSupply > 0, "Total Supply must be positive");
-        events[eventCount] = EventData( name, ipfsURL, date, price,totalSupply, 0, payable(msg.sender));
+        events[eventCount] = EventData(
+            name,
+            ipfsURL,
+            date,
+            price,
+            totalSupply,
+            0,
+            payable(msg.sender)
+        );
 
         emit EventCreated(eventCount, name, ipfsURL, date, price, totalSupply);
         eventCount++;
@@ -100,7 +108,10 @@ contract Ticketing is ERC721, AccessControl, ReentrancyGuard {
     //Organizers can take all the money in teh contract to their wallet
     function withdraw(uint256 eventId) external nonReentrant {
         EventData storage ev = events[eventId];
-        require(msg.sender == ev.organizer, "Only the event organizer can withdraw");
+        require(
+            msg.sender == ev.organizer,
+            "Only the event organizer can withdraw"
+        );
         uint256 balance = eventBalances[eventId];
         require(balance > 0, "Nothing to withdraw");
 
@@ -110,37 +121,63 @@ contract Ticketing is ERC721, AccessControl, ReentrancyGuard {
     }
 
     // returns the metadata URL for a given NFT ticket so wallets/marketplaces can display the correct info of that token
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
         uint256 eventId = ticketToEvent[tokenId];
         return events[eventId].ipfsURL;
     }
 
     //Admins can let other people become organizers
-    function grantOrganizer(address organizer) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function grantOrganizer(
+        address organizer
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(organizer != address(0), "Cannot grant role to zero address");
         _grantRole(ORGANIZER_ROLE, organizer);
     }
 
-    function revokeOrganizer(address organizer) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function revokeOrganizer(
+        address organizer
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(ORGANIZER_ROLE, organizer);
     }
 
-    function transferFrom(address from, address to, uint256 tokenId) public override {
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) public pure override {
         revert("Transfers are not allowed, use resaleTicket()");
     }
 
-    function safeTransferFrom(address from, address to, uint256 tokenId) public override {
+    function safeTransferFrom(
+        address,
+        address,
+        uint256
+    ) public pure override {
         revert("Transfers are disabled, use resaleTicket()");
     }
 
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override {
+    function safeTransferFrom(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure override{
         revert("Transfers are disabled, use resaleTicket()");
     }
 
     bool private transferring = false;
 
-    function resaleTicket(uint256 tokenId, address seller, address buyer) external payable nonReentrant {
+    function resaleTicket(
+        uint256 tokenId,
+        address seller,
+        address buyer
+    ) external payable nonReentrant {
         require(_exists(tokenId), "TokenId is invalid");
         require(ownerOf(tokenId) == seller, "Seller is not token owner");
         require(!resold[tokenId], "Ticket has already been resold");
@@ -149,7 +186,10 @@ contract Ticketing is ERC721, AccessControl, ReentrancyGuard {
 
         uint256 eventId = ticketToEvent[tokenId];
         uint256 maxPrice = events[eventId].price;
-        require(msg.value <= maxPrice, "Resale price cannot exceed the original price");
+        require(
+            msg.value <= maxPrice,
+            "Resale price cannot exceed the original price"
+        );
 
         // Mark as resold and payout to seller
         resold[tokenId] = true;
@@ -163,8 +203,18 @@ contract Ticketing is ERC721, AccessControl, ReentrancyGuard {
         transferring = false;
     }
 
-    function _transfer(address from, address to, uint256 tokenId) internal override {
-    require(transferring, "Transfers are disabled, use resaleTicket()");
-    super._transfer(from, to, tokenId);
-}
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        require(transferring, "Transfers are disabled, use resaleTicket()");
+        super._transfer(from, to, tokenId);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC721, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
 }
